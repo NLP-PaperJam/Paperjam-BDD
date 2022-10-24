@@ -7,6 +7,7 @@ import sys
 config.fileConfig('logging.conf')
 logger = logging.getLogger('mongoClient')
 
+
 def connect_mongo(url):
     """
         Connect to mongodb server.
