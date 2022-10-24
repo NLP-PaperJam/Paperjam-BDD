@@ -1,6 +1,7 @@
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
+from time import sleep
 from typing import Iterable
 from client import *
 import tempfile
@@ -31,7 +32,7 @@ class StepCode(Enum):
     ERROR = 102
 
 
-def get_batch(batch_size, register_filter):
+def get_batch(register, batch_size, register_filter):
     try:
         register_entries = list(register.find(register_filter, limit=batch_size))
         batch = register_entries, [{'acl_id':entry['acl_id']} for entry in register_entries]
@@ -184,8 +185,9 @@ def post_grobid_api(batch : Iterable, config_path : Path, dir_path : Path):
             update_register_steps(entry, name, code, msg, close)
 
 
-if __name__ == '__main__':
-    
+def process_batch():
+    t = datetime.now().timestamp()
+
     logger.info(f'start connecting mongodb and retrieve register and documents ...')
     db = get_db(connect_mongo(MONGO_URL), MONGO_DB_NAME)
     register = get_collection(db, MONGO_REGISTER_COLLECTION)
@@ -193,7 +195,9 @@ if __name__ == '__main__':
     # TODO : Check if register has same closed entries count than documents count
     
     logger.info(f'create register entries batch ...')
-    batch = get_batch(BATCH_DEFAULT_SIZE, BATCH_DEFAULT_FILTER)
+    batch = get_batch(register, BATCH_DEFAULT_SIZE, BATCH_DEFAULT_FILTER)
+    if len(batch[0]) == 0:
+        return False
 
     logger.info(f'start requesting s2 api ...')
     get_s2_api(batch, S2_API_URL, S2_API_FIELDS)
@@ -214,6 +218,16 @@ if __name__ == '__main__':
         update_one({'acl_id':entry['acl_id']}, {'$set': {'close':True, 'steps':entry['steps']}}, register)
     logger.debug(f'success updating register entries ...')
     
-
+    t = datetime.now().timestamp() - t
+    sleep(min(0, 5 * 60 - t))
     register.database.client.close()
+    logger.info(f'batch process ended in {t} ({t/BATCH_DEFAULT_SIZE} by entry)')
+    return True
+
+if __name__ == '__main__':
+    loop = True
+    while loop:
+        loop = process_batch()
+
     logger.info(f'all process ended')
+    
