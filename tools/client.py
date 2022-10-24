@@ -1,6 +1,10 @@
+from typing import Any, Dict, List, Mapping, Optional
+from gridfs import ClientSession
 from pymongo import MongoClient
 from logging import config
+from datetime import datetime
 
+import pymongo
 import logging
 import sys
 
@@ -81,3 +85,76 @@ def get_collection(db, name):
         logger.exception(f'collection  `{name}` not found')
         sys.exit()
 
+
+def add_meta_date(to_add):
+    timestamp = datetime.now().timestamp()
+    to_add.update({'insert_date':timestamp, 'last_update_date':timestamp})
+    return to_add
+
+
+def update_meta_date(to_update):
+    timestamp = datetime.now().timestamp()
+    if '$set' not in to_update:
+        to_update['$set'].update({'last_update_date':timestamp}) 
+    return to_update
+
+
+def insert_one(
+    document: dict,
+    collection: pymongo.collection.Collection,
+    bypass_document_validation: bool = False, 
+    session: Optional[ClientSession] = None, 
+    comment: Optional[Any] = None
+    ):
+
+    collection.insert_one(
+        add_meta_date(document), 
+        bypass_document_validation=bypass_document_validation, 
+        session=session, 
+        comment=comment)
+
+
+def insert_many(
+    documents: List[Dict], 
+    collection: pymongo.collection.Collection, 
+    ordered: bool = True, 
+    bypass_document_validation: bool = False, 
+    session: Optional[ClientSession] = None, 
+    comment: Optional[Any] = None
+    ):
+    
+    collection.insert_many(
+        [add_meta_date(document) for document in documents],
+        ordered = ordered,
+        bypass_document_validation=bypass_document_validation, 
+        session=session, 
+        comment=comment)
+
+
+def update_one(
+    filter:Mapping[str, Any],
+    update:dict,
+    collection,
+    upsert = False,
+    bypass_document_validation = False,
+    collation = None,
+    array_filters = None,
+    hint = None,
+    session = None,
+    let = None,
+    comment = None):
+    
+    collection.update_one(
+        filter, 
+        update_meta_date(update), 
+        upsert=upsert, 
+        bypass_document_validation=bypass_document_validation, 
+        collation=collation, 
+        array_filters=array_filters, 
+        hint=hint, 
+        session=session, 
+        let=let, 
+        comment=comment)
+
+
+# TODO : bulkWrite and use it in update_register and update_documents
