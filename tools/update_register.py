@@ -12,7 +12,7 @@ MONGO_DB_NAME = os.getenv('MONGO_DB_NAME', 'pwj-db')
 MONGO_REGISTER_COLLECTION = os.getenv('MONGO_REGISTER_COLLECTION', 'register')
 
 ACL_ANTHOLOGY_URL = 'https://aclanthology.org/anthology.bib.gz'
-ACL_ID_PATTERN = re.compile(r"url = \"(?:http(?:s)?:\/\/)?[\w.-]+(?:\.[\w\.-]+)\/+([\w\-\._~:?#[\]@!\$&'\(\)\*\+,;=.]+)(?:\.pdf)?\"")
+ACL_ID_PATTERN = re.compile(r"(?:url = \".*/)([\w\-\.]*?)(?:(?:\.pdf)?\",)")
 
 config.fileConfig('logging.conf')
 logger = logging.getLogger('updateRegister')
