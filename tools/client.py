@@ -6,33 +6,38 @@ from datetime import datetime
 
 import pymongo
 import logging
-import sys
+import os, sys
 
 config.fileConfig('logging.conf')
 logger = logging.getLogger('mongoClient')
 
 
-def connect_mongo(url):
+def connect_mongo():
     """
         Connect to mongodb server.
         Check if connection is alive (or wait timeout).
         Log any errors.
-
-        Parameters
-        ----------
-        url : str, mongodb url to connect.
 
         Returns
         -------
         client : pymongo.MongoClient, mongodb client with an active connection.
     """
     try:
-        client = MongoClient(f'{url}', connect=True)
+        host = os.getenv('MONGO_URL', 'localhost:27017')
+        username = os.getenv('MONGO_USERNAME', '')
+        password = os.getenv('MONGO_PASSWORD', '')
+
+        if username != '' and password != '':
+            url = f'mongodb://{username}:{password}@{host}'
+        else:
+            url = f'mongodb://{host}'
+
+        client = MongoClient(url, connect=True)
         client.is_mongos # Wait connection timeout if can't connect
-        logger.debug(f'connect mongodb at {url}')
+        logger.debug(f'connect mongodb at {host}')
         return client
     except Exception as e:
-        logger.exception(f'can\'t connect mongodb at {url}')
+        logger.exception(f'can\'t connect mongodb at {host}')
         sys.exit()
 
 

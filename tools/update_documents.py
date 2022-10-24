@@ -10,21 +10,24 @@ from grobid_client.grobid_client import GrobidClient
 import requests
 import os
 
-MONGO_URL = os.getenv('MONGO_URL', 'localhost:27017')
+
 MONGO_DB_NAME = os.getenv('MONGO_DB_NAME', 'pwj-db')
 MONGO_REGISTER_COLLECTION = os.getenv('MONGO_REGISTER_COLLECTION', 'register')
 MONGO_DOCUMENTS_COLLECTION = os.getenv('MONGO_DOCUMENTS_COLLECTION', 'documents')
 
+
 BATCH_DEFAULT_FILTER = {'close': False}
-BATCH_DEFAULT_SIZE = 100
+BATCH_DEFAULT_SIZE = 10 
+
 
 S2_API_URL = 'https://api.semanticscholar.org/graph/v1/paper/'
 S2_API_FIELDS = 'paperId,externalIds,url,title,abstract,venue,year,referenceCount,citationCount,influentialCitationCount,isOpenAccess,fieldsOfStudy,s2FieldsOfStudy,publicationTypes,publicationDate,journal,authors,authors.externalIds,authors.url,authors.name,authors.aliases,authors.affiliations,authors.homepage,authors.paperCount,authors.citationCount,authors.hIndex,citations,citations.corpusId,citations.externalIds,citations.url,citations.title,citations.abstract,citations.venue,citations.year,citations.referenceCount,citations.citationCount,citations.influentialCitationCount,citations.isOpenAccess,citations.fieldsOfStudy,citations.s2FieldsOfStudy,citations.publicationTypes,citations.publicationDate,citations.journal,citations.authors,references,references.externalIds,references.url,references.title,references.abstract,references.venue,references.year,references.referenceCount,references.citationCount,references.influentialCitationCount,references.isOpenAccess,references.fieldsOfStudy,references.s2FieldsOfStudy,references.authors,references.publicationTypes,references.publicationDate,references.journal'
-
 ACL_PDF_URL= 'https://aclanthology.org/'
+
 
 config.fileConfig('logging.conf')
 logger = logging.getLogger('updateDocument')
+
 
 class StepCode(Enum):
     SUCCESS = 1
@@ -189,7 +192,7 @@ def process_batch():
     t = datetime.now().timestamp()
 
     logger.info(f'start connecting mongodb and retrieve register and documents ...')
-    db = get_db(connect_mongo(MONGO_URL), MONGO_DB_NAME)
+    db = get_db(connect_mongo(), MONGO_DB_NAME)
     register = get_collection(db, MONGO_REGISTER_COLLECTION)
     documents = get_collection(db, MONGO_DOCUMENTS_COLLECTION)
     # TODO : Check if register has same closed entries count than documents count

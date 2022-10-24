@@ -7,12 +7,15 @@ from logging import config
 import os, re, sys
 import gzip
 
-MONGO_URL = os.getenv('MONGO_URL', 'localhost:27017')
+
 MONGO_DB_NAME = os.getenv('MONGO_DB_NAME', 'pwj-db')
 MONGO_REGISTER_COLLECTION = os.getenv('MONGO_REGISTER_COLLECTION', 'register')
+MONGO_DOCUMENTS_COLLECTION = os.getenv('MONGO_DOCUMENTS_COLLECTION', 'documents')
+
 
 ACL_ANTHOLOGY_URL = 'https://aclanthology.org/anthology.bib.gz'
 ACL_ID_PATTERN = re.compile(r"(?:url = \".*/)([\w\-\.]*?)(?:(?:\.pdf)?\",)")
+
 
 config.fileConfig('logging.conf')
 logger = logging.getLogger('updateRegister')
@@ -162,7 +165,7 @@ if __name__ == '__main__':
     acl_ids = list(acl_ids)[:N] if N else list(acl_ids) # Select only N acl_ids if `n` is given in args
 
     logger.info(f'start connecting mongodb and retrieve register ...')
-    register = get_collection(get_db(connect_mongo(MONGO_URL), MONGO_DB_NAME), MONGO_REGISTER_COLLECTION)
+    register = get_collection(get_db(connect_mongo(), MONGO_DB_NAME), MONGO_REGISTER_COLLECTION)
     # TODO : Check if register has same closed entries count than documents count
 
     logger.info(f'start updating register with new acl_ids ...')
