@@ -17,7 +17,7 @@ MONGO_DOCUMENTS_COLLECTION = os.getenv('MONGO_DOCUMENTS_COLLECTION', 'documents'
 
 
 BATCH_DEFAULT_FILTER = {'close': False}
-BATCH_DEFAULT_SIZE = 10 
+BATCH_DEFAULT_SIZE = 100
 
 
 S2_API_URL = 'https://api.semanticscholar.org/graph/v1/paper/'
@@ -222,7 +222,7 @@ def process_batch():
     logger.debug(f'success updating register entries ...')
     
     t = datetime.now().timestamp() - t
-    sleep(min(0, 5 * 60 - t))
+    sleep(max(0, 5 * 60 - t))
     register.database.client.close()
     logger.info(f'batch process ended in {t} ({t/BATCH_DEFAULT_SIZE} by entry)')
     return True
