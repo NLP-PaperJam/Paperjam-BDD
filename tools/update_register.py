@@ -139,7 +139,7 @@ def update_register(register, acl_ids):
         start_count = register.count_documents({})
         for acl_id in tqdm(acl_ids, desc='Update register entries :'):
             if not register.find_one({'acl_id':acl_id}):
-                register.insert_one(create_register_entry(acl_id))
+                insert_one(create_register_entry(acl_id), register)
         end_count = register.count_documents({})
         logger.debug(f'success for update register. added {end_count-start_count} entries, from {start_count} to {end_count}')
     except Exception as e:
