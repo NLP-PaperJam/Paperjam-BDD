@@ -11,15 +11,15 @@ logger = logging.getLogger('mongoClient')
 
 
 if __name__ == '__main__':
-    db = get_db()
+    db = connect_mongo()
     
     db[MONGO_DB_NAME]
-    db = get_db(MONGO_DB_NAME)
+    db = get_db(db, MONGO_DB_NAME)
 
     db[MONGO_REGISTER_COLLECTION]
-    get_collection(MONGO_REGISTER_COLLECTION)
+    get_collection(db, MONGO_REGISTER_COLLECTION)
 
     db[MONGO_DOCUMENTS_COLLECTION]
-    get_collection(MONGO_DOCUMENTS_COLLECTION)
+    get_collection(db, MONGO_DOCUMENTS_COLLECTION)
 
     logger.info(f'all process ended')
