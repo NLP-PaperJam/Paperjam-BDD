@@ -105,7 +105,7 @@ def get_acl_pdf(batch : Iterable, dir_path : Path, url : str):
             msg = ''
             close = False
 
-            res = requests.get(f'{url}/{acl_id}.pdf') # TODO : move url
+            res = requests.get(f'{url}/{acl_id}.pdf', verify=False) # TODO : move url
             if res.status_code == 200:
                 (dir_path / f'{acl_id}.pdf').write_bytes(res.content)
                 logger.debug(f'success for get_acl_pdf with : acl_id = {acl_id}, dir_path = {dir_path}, url = {url}')
