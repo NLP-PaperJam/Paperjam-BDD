@@ -89,7 +89,8 @@ def get_s2_api(batch, url : str, fields : str):
             msg = 'Unknow exception triggered. Check logs.'
         finally:
             update_register_steps(entry, name, code, msg, close)
-
+            if res:
+                res.close()
 
 def get_acl_pdf(batch : Iterable, dir_path : Path, url : str):
     name = 'acl_pdf'
@@ -125,7 +126,8 @@ def get_acl_pdf(batch : Iterable, dir_path : Path, url : str):
             msg = 'Unknow exception triggered. Check logs.'
         finally:
             update_register_steps(entry, name, code, msg, close)
-
+            if res:
+                res.close()
 
 def post_grobid_api(batch : Iterable, config_path : Path, dir_path : Path):    
     name = 'grobid_api'
@@ -186,7 +188,6 @@ def post_grobid_api(batch : Iterable, config_path : Path, dir_path : Path):
             msg = 'Unknow exception triggered during grobid result handling. Check logs.' if msg == '' else msg
         finally:
             update_register_steps(entry, name, code, msg, close)
-
 
 def process_batch():
     t = datetime.now().timestamp()
