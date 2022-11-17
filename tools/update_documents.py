@@ -106,7 +106,7 @@ def get_acl_pdf(batch : Iterable, dir_path : Path, url : str):
             msg = ''
             close = False
 
-            res = requests.get(f'{url}/{acl_id}.pdf', verify=False) # TODO : move url
+            res = requests.get(f'{url}/{acl_id}.pdf') # TODO : move url
             if res.status_code == 200:
                 (dir_path / f'{acl_id}.pdf').write_bytes(res.content)
                 logger.debug(f'success for get_acl_pdf with : acl_id = {acl_id}, dir_path = {dir_path}, url = {url}')
@@ -176,7 +176,7 @@ def post_grobid_api(batch : Iterable, config_path : Path, dir_path : Path):
                 document['grobid'] = (dir_path / f'{acl_id}.tei.xml').read_text(encoding='utf-8')
                 logger.debug(f'success for post_grobid_api with : acl_id = {acl_id}, dir_path = {dir_path}, url = {config_path}')
             elif (dir_path / f'{acl_id}.txt').is_file():
-                msg = (dir_path / f'{acl_id}.tei.xml').read_text(encoding='utf-8') 
+                msg = (dir_path / f'{acl_id}.txt').read_text(encoding='utf-8') 
                 raise
             else:
                 msg = f'file not found : {acl_id}(.tei.xml|.txt)'
@@ -189,20 +189,8 @@ def post_grobid_api(batch : Iterable, config_path : Path, dir_path : Path):
         finally:
             update_register_steps(entry, name, code, msg, close)
 
-def process_batch():
+def process_batch(batch):
     t = datetime.now().timestamp()
-
-    logger.info(f'start connecting mongodb and retrieve register and documents ...')
-    db = get_db(connect_mongo(), MONGO_DB_NAME)
-    register = get_collection(db, MONGO_REGISTER_COLLECTION)
-    documents = get_collection(db, MONGO_DOCUMENTS_COLLECTION)
-    # TODO : Check if register has same closed entries count than documents count
-    
-    logger.info(f'create register entries batch ...')
-    batch = get_batch(register, BATCH_DEFAULT_SIZE, BATCH_DEFAULT_FILTER)
-    if len(batch[0]) == 0:
-        return False
-
     logger.info(f'start requesting s2 api ...')
     get_s2_api(batch, S2_API_URL, S2_API_FIELDS)
 
@@ -229,9 +217,39 @@ def process_batch():
     return True
 
 if __name__ == '__main__':
-    loop = True
-    while loop:
-        loop = process_batch()
 
-    logger.info(f'all process ended')
+    from dotenv import load_dotenv
+    load_dotenv()
     
+    logger.info(f'start connecting mongodb and retrieve register and documents ...')
+    db = get_db(connect_mongo(), MONGO_DB_NAME)
+    register = get_collection(db, MONGO_REGISTER_COLLECTION)
+    documents = get_collection(db, MONGO_DOCUMENTS_COLLECTION)
+    # TODO : Check if register has same closed entries count than documents count
+    
+    logger.info(f'create register entries batch ...')
+
+    acl_ids = [
+        'W18-0615',
+        'W07-1903',
+        '2021.icnlsp-1.2',
+        'W09-0801',
+        'C69-6901',
+        '2020.parlaclarin-1.2',
+        '2020.parlaclarin-1.11',
+        '2020.parlaclarin-1.12',
+        'D19-1534',
+        'W07-0202']
+    register_entries = list(register.find({'acl_id':{'$in':acl_ids}}))
+    # print(register_entries)
+    batch = register_entries, [{'acl_id':entry['acl_id']} for entry in register_entries]
+    process_batch(batch)
+    # loop = True
+    # while loop:
+    #   batch = get_batch(register, BATCH_DEFAULT_SIZE, BATCH_DEFAULT_FILTER)
+    #   if len(batch[0]) != 0:
+    #     loop = process_batch(batch)
+
+    # logger.info(f'all process ended')
+    
+

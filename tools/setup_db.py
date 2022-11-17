@@ -11,15 +11,25 @@ logger = logging.getLogger('mongoClient')
 
 
 if __name__ == '__main__':
-    db = connect_mongo()
-    
-    db[MONGO_DB_NAME]
-    db = get_db(db, MONGO_DB_NAME)
+    host = os.getenv('MONGO_URL', 'localhost:27017')
+    username = os.getenv('MONGO_USERNAME', '')
+    password = os.getenv('MONGO_PASSWORD', '')
 
-    db[MONGO_REGISTER_COLLECTION]
-    get_collection(db, MONGO_REGISTER_COLLECTION)
+    url = f"mongodb://{username}:{password}@{host}"
+    print(url)
 
-    db[MONGO_DOCUMENTS_COLLECTION]
-    get_collection(db, MONGO_DOCUMENTS_COLLECTION)
+    client = MongoClient(url)
+    db = client['pwj-db']
+    # print(db.list_collection_names())
+    print(db['documents'].count_documents({}))
 
-    logger.info(f'all process ended')
+    # db[MONGO_DB_NAME]
+    # db = get_db(db, MONGO_DB_NAME)
+
+    # db[MONGO_REGISTER_COLLECTION]
+    # print(get_collection(db, MONGO_REGISTER_COLLECTION).count_documents({}))
+
+    # db[MONGO_DOCUMENTS_COLLECTION]
+    # print(get_collection(db, MONGO_DOCUMENTS_COLLECTION).count_documents({}))
+
+    # logger.info(f'all process ended')
