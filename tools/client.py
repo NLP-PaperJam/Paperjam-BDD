@@ -11,7 +11,6 @@ import os, sys
 config.fileConfig('logging.conf')
 logger = logging.getLogger('mongoClient')
 
-
 def connect_mongo():
     """
         Connect to mongodb server.
@@ -26,6 +25,8 @@ def connect_mongo():
         host = os.getenv('MONGO_URL', 'localhost:27017')
         username = os.getenv('MONGO_USERNAME', '')
         password = os.getenv('MONGO_PASSWORD', '')
+
+        print(host)
 
         if username != '' and password != '':
             url = f'mongodb://{username}:{password}@{host}'

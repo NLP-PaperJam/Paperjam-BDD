@@ -1,6 +1,6 @@
 {
     "grobid_server": "https://cloud.science-miner.com/grobid/",
-    "batch_size": 100,
+    "batch_size": 10,
     "sleep_time": 5,
     "timeout": 60,
     "coordinates": [ "persName", "figure", "ref", "biblStruct", "formula", "s" ]
