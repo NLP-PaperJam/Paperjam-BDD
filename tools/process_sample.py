@@ -1,9 +1,15 @@
-from pymongo import MongoClient
-import os
 import re
 import json
-from pathlib import Path
+import logging
+
+import spacy
 from tqdm import tqdm
+
+from client import *
+from helpers import write_jsonl
+
+logging.config.fileConfig('logging.conf')
+logger = logging.getLogger('processSample')
 
 #faire une version/adapter pour lire les ids ACL aussi ?
 def get_grobides(ids:list):
@@ -15,20 +21,13 @@ def get_grobides(ids:list):
         ids : une liste d'identifiants semantic scholar
     """
     if type(ids) is list:
-        host = os.getenv('MONGO_URL', 'localhost:27017')
-        username = os.getenv('MONGO_USERNAME', '')
-        password = os.getenv('MONGO_PASSWORD', '')
+        docs = get_collection(get_db(connect_mongo(), MONGO_DB_NAME), MONGO_DOCUMENTS_COLLECTION)
+        return [doc['grobid'] for doc in docs.find({'s2.paperId':{'$in':ids}})]
 
-        url = f"mongodb://{username}:{password}@{host}"
-        #print(url)
+    logger.error(f'function needs a list {type(ids)}') #si l'élément passé en paramètre n'est pas une liste, renvoie une erreur
+    exit(1) # TODO : Maybe raise ?
 
-        client = MongoClient(url)
-        db = client['pwj-db']
-        return [doc['grobid'] for doc in db['documents'].find({'s2.paperId':{'$in':ids}})]
-    print("Error: function needs a list") #si l'élément passé en paramètre n'est pas une liste, renvoie une erreur
-    exit(1)
-
-def get_values(doc:list):
+def process_doc(doc:str, tokenizer):
     """
         Pour un élément grobid passé en paramètre, renvoie les spans des sections, des phrases et les mots contenus dans le document
 
@@ -54,17 +53,12 @@ def get_values(doc:list):
         len_sections.append([len_section,len_sentence]) #ajoute les spans des phrases de la section
     return({'sections':len_sections,'sentences':len_sentences,'words':words})
 
-def write_jsonl(path, data, encoding='utf-8'):
-    """
-        Shortcut for write jsonl file
-
-        Parameters
-        ----------
-        path : str or Path, path of data to read
-        encoding : str, default='utf-8', encoding format to write.
-    """
-    path = Path(path) if isinstance(path, str) else path
-    path.write_text('\n'.join([json.dumps(item) for item in data]), encoding=encoding)
+def process_docs(docs:list):
+    nlp = spacy.load('en_core_web_sm') #mettre dans une fonction
+    results = []
+    for doc in tqdm(docs): #pour chaque document grobid
+        results.append(process_doc(doc, nlp.tokenizer)) #fait la tokenisation, etc
+    return results
 
 if __name__ == '__main__':
     
@@ -72,17 +66,17 @@ if __name__ == '__main__':
     from dotenv import load_dotenv
 
     if len(sys.argv) != 3: #vérifie que 2 arguments ont été fournis
-        print ("Error: two (2) arguments (input path and output path) needed")
+        logger.error('two (2) arguments (input path and output path) needed')
         exit (1)
 
     if sys.argv[2][-6:]!='.jsonl': #vérifie que le chemin du fichier sortie par .jsonl
-        print('Error: path provided for output does not end in .jsonl')
+        logger.error('path provided for output does not end in .jsonl')
         exit(1)
 
     try:
         open(sys.argv[1],'r') #teste si le fichier entrée existe déjà
     except IOError:
-        print('Error: invalid input path')
+        logger.error('invalid input path')
         exit(1)
 
     try:
@@ -91,24 +85,15 @@ if __name__ == '__main__':
         try:
             open(sys.argv[2], 'w') #teste si le fichier sortie peut être créé
         except IOError:
-            print('Error: invalid output path')
+            logger.error('invalid output path')
             exit(1)
 
     load_dotenv() #charge le .env pour la connexion à la BDD
  
-    import spacy
 
     with open(sys.argv[1]) as f:
         ids = json.load(f)
 
     docs = get_grobides(ids) #récupère les documents grobid
-    print(f'Successfully retrieved {len(docs)}/{len(ids)} documents from the database')
-
-    nlp = spacy.load('en_core_web_sm') #mettre dans une fonction
-    tokenizer = nlp.tokenizer
-    results = []
-
-    for doc in tqdm(docs): #pour chaque document grobid
-        results.append(get_values(doc)) #fait la tokenisation, etc
-
-    write_jsonl(sys.argv[2],results) #sauvegarde les résultats
+    logger.info(f'successfully retrieved {len(docs)}/{len(ids)} documents from the database')
+    write_jsonl(sys.argv[2], process_docs(docs)) #sauvegarde les résultats
