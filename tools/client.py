@@ -30,8 +30,6 @@ def connect_mongo():
         username = os.getenv('MONGO_USERNAME', '')
         password = os.getenv('MONGO_PASSWORD', '')
 
-        print(host)
-
         if username != '' and password != '':
             url = f'mongodb://{username}:{password}@{host}'
         else:
