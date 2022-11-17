@@ -1,0 +1,114 @@
+from pymongo import MongoClient
+import os
+import re
+import json
+from pathlib import Path
+from tqdm import tqdm
+
+#faire une version/adapter pour lire les ids ACL aussi ?
+def get_grobides(ids:list):
+    """
+        Pour une liste d'identifiants semantic scholar passée en paramètre, renvoie les éléments 'grobid' correspondants
+
+        Paramètres
+        ----------
+        ids : une liste d'identifiants semantic scholar
+    """
+    if type(ids) is list:
+        host = os.getenv('MONGO_URL', 'localhost:27017')
+        username = os.getenv('MONGO_USERNAME', '')
+        password = os.getenv('MONGO_PASSWORD', '')
+
+        url = f"mongodb://{username}:{password}@{host}"
+        #print(url)
+
+        client = MongoClient(url)
+        db = client['pwj-db']
+        return [doc['grobid'] for doc in db['documents'].find({'s2.paperId':{'$in':ids}})]
+    print("Error: function needs a list") #si l'élément passé en paramètre n'est pas une liste, renvoie une erreur
+    exit(1)
+
+def get_values(doc:list):
+    """
+        Pour un élément grobid passé en paramètre, renvoie les spans des sections, des phrases et les mots contenus dans le document
+
+        Paramètres
+        ----------
+        doc : une liste de documents au format XML générés par Grobid
+    """
+    sections = re.findall('(?:ead.*?</head>)(.*?)(?:<h)',doc,re.DOTALL)
+    sections.insert(0,'<s>{}</s>{}'.format(re.search('(?:<title .*?>)(.*?)(?:</title>)',doc).group(1), re.search('(?:abstract>)(.*)(?:</abstract)',doc,re.DOTALL).group(1))) #abstract+titre
+    len_section = 0; len_sentence = 0 #compteurs de tokens
+    len_sections = []; len_sentences = []; words = [] #tableau span sections, tableau span phrases, tableau mots
+    for section in sections: #pour chaque section
+        section=re.sub('<ref type="bibr.*?</ref>','',section) #retire les références bibliographiques
+        section=re.sub('<ref.*?</ref>','[reference]',section) #remplace les références non bibliographiques
+        sentences = re.findall('(?:<s>)(.*?)(?:</s>)',section) #récupère les phrases de la section
+        len_section = len_sentence #enregistre le span de la 1ère phrase de la section 
+        for sentence in sentences:
+            sentence = [token.orth_ for token in tokenizer(sentence)] #tokenise la phrase, récupère le résultat avec chaque token en str
+            for word in sentence:
+                words.append(word)
+            len_sentences.append([len_sentence,len_sentence+len(sentence)]) #ajoute le span de la phrase
+            len_sentence+=len(sentence) #incrémente le compteur
+        len_sections.append([len_section,len_sentence]) #ajoute les spans des phrases de la section
+    return({'sections':len_sections,'sentences':len_sentences,'words':words})
+
+def write_jsonl(path, data, encoding='utf-8'):
+    """
+        Shortcut for write jsonl file
+
+        Parameters
+        ----------
+        path : str or Path, path of data to read
+        encoding : str, default='utf-8', encoding format to write.
+    """
+    path = Path(path) if isinstance(path, str) else path
+    path.write_text('\n'.join([json.dumps(item) for item in data]), encoding=encoding)
+
+if __name__ == '__main__':
+    
+    import sys
+    from dotenv import load_dotenv
+
+    if len(sys.argv) != 3: #vérifie que 2 arguments ont été fournis
+        print ("Error: two (2) arguments (input path and output path) needed")
+        exit (1)
+
+    if sys.argv[2][-6:]!='.jsonl': #vérifie que le chemin du fichier sortie par .jsonl
+        print('Error: path provided for output does not end in .jsonl')
+        exit(1)
+
+    try:
+        open(sys.argv[1],'r') #teste si le fichier entrée existe déjà
+    except IOError:
+        print('Error: invalid input path')
+        exit(1)
+
+    try:
+        open(sys.argv[2],'r') #teste si le fichier sortie existe déjà
+    except IOError:
+        try:
+            open(sys.argv[2], 'w') #teste si le fichier sortie peut être créé
+        except IOError:
+            print('Error: invalid output path')
+            exit(1)
+
+    load_dotenv() #charge le .env pour la connexion à la BDD
+ 
+    import spacy
+
+    with open(sys.argv[1]) as f:
+        ids = json.load(f)
+
+    docs = get_grobides(ids) #récupère les documents grobid
+    print(f'Successfully retrieved {len(docs)}/{len(ids)} documents from the database')
+
+    nlp = spacy.load('en_core_web_sm') #mettre dans une fonction
+    tokenizer = nlp.tokenizer
+    results = []
+
+    for doc in tqdm(docs): #pour chaque document grobid
+        results.append(get_values(doc)) #fait la tokenisation, etc
+
+    write_jsonl(sys.argv[2],results) #sauvegarde les résultats
