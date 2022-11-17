@@ -5,11 +5,11 @@ import logging
 import spacy
 from tqdm import tqdm
 
-from tools.client import *
-from tools.helpers import write_jsonl
+from client import *
+from helpers import write_jsonl
 
 logging.config.fileConfig('logging.conf')
-logger = logging.getLogger('mongoClient')
+logger = logging.getLogger('processSample')
 
 #faire une version/adapter pour lire les ids ACL aussi ?
 def get_grobides(ids:list):
